@@ -39,15 +39,14 @@ fn parse_table(table: pandoc::Table) -> Table {
 }
 
 fn get_first_plain(blocks: Vec<pandoc::Block>) -> String {
-    if blocks.len() != 1 {
-        panic!("Unexpected get_first_plain on {:?} of len > 1", blocks);
-    }
-    match blocks.get(0).unwrap() {
+    match blocks
+        .expect_one()
+        .unwrap_or_else(|| panic!("Unexpected get_first_plain on {:?} of len > 1", blocks))
+    {
         pandoc::Block::Plain(inlines) => {
-            if inlines.len() != 1 {
-                panic!("Unexpected get_first plain on multiple inlines {inlines:?}");
-            }
-            match inlines.get(0).unwrap() {
+            match inlines.expect_one().unwrap_or_else(|| {
+                panic!("Unexpected get_first plain on multiple inlines {inlines:?}")
+            }) {
                 pandoc::Inline::Str(s) => s.clone(),
                 other => panic!("Unexpected inline {other:?}"),
             }
@@ -57,19 +56,17 @@ fn get_first_plain(blocks: Vec<pandoc::Block>) -> String {
 }
 
 fn parse_table_head(head: pandoc::TableHead) -> Vec<String> {
-    if head.rows.len() != 1 {
-        panic!("Unexpected {:?} of len > 1", head.rows);
-    }
-    rows_to_vec_str(head.rows.get(0).unwrap())
+    rows_to_vec_str(
+        head.rows
+            .expect_one()
+            .unwrap_or_else(|| panic!("Unexpected {:?} of len > 1", head.rows)),
+    )
 }
 
 fn parse_table_bodies(bodies: Vec<pandoc::TableBody>) -> Vec<Vec<String>> {
-    if bodies.len() != 1 {
-        panic!("Unexpected table bodies {:?} of len > 1", bodies);
-    }
     bodies
-        .get(0)
-        .unwrap()
+        .expect_one()
+        .unwrap_or_else(|| panic!("Unexpected table bodies {:?} of len != 1", bodies))
         .body
         .iter()
         .map(rows_to_vec_str)
@@ -82,4 +79,18 @@ fn rows_to_vec_str(row: &pandoc::Row) -> Vec<String> {
         .map(|c| c.content.clone())
         .map(get_first_plain)
         .collect()
+}
+
+trait ExpectOne<T> {
+    fn expect_one(&self) -> Option<&T>;
+}
+
+impl<T> ExpectOne<T> for Vec<T> {
+    fn expect_one(&self) -> Option<&T> {
+        match &self[..] {
+            [] => None,
+            [s] => Some(s),
+            _ => None,
+        }
+    }
 }
