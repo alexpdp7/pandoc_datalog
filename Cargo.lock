@@ -994,6 +994,7 @@ name = "pandoc_datalog"
 version = "0.1.0"
 dependencies = [
  "cozo",
+ "itertools",
  "pandoc_types",
  "serde",
  "serde_json",

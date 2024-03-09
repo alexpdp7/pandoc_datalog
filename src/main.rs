@@ -1,27 +1,29 @@
+use itertools::Itertools;
+
 use pandoc_types::definition as pandoc;
 
 fn main() {
     let d: pandoc::Pandoc = serde_json::from_reader(std::io::stdin()).unwrap();
     for block in d.blocks {
         match block {
-            pandoc::Block::Table(table) => process_table(parse_table(table)),
+            pandoc::Block::Table(table) => process_table(&parse_table(&table)),
             _ => println!("Skipping {block:?}"),
         }
     }
 }
 
 #[derive(Debug)]
-struct Table {
-    name: String,
+struct Table<'a> {
+    name: &'a str,
     columns: Vec<String>,
     rows: Vec<Vec<String>>,
 }
 
-fn process_table(table: Table) {
+fn process_table(table: &Table) {
     dbg!(table);
 }
 
-fn parse_table(table: pandoc::Table) -> Table {
+fn parse_table(table: &pandoc::Table) -> Table {
     let pandoc::Table {
         caption: pandoc::Caption {
             long: long_caption, ..
@@ -37,16 +39,19 @@ fn parse_table(table: pandoc::Table) -> Table {
     }
 }
 
-fn get_first_plain(blocks: Vec<pandoc::Block>) -> String {
+fn get_first_plain(blocks: &[pandoc::Block]) -> &str {
     match blocks
-        .expect_one()
-        .unwrap_or_else(|| panic!("Unexpected get_first_plain on {:?} of len > 1", blocks))
+        .iter()
+        .exactly_one()
+        .unwrap_or_else(|e| panic!("{e} in get_first_plain on {:?} of len > 1", blocks))
     {
         pandoc::Block::Plain(inlines) => {
-            match inlines.expect_one().unwrap_or_else(|| {
-                panic!("Unexpected get_first plain on multiple inlines {inlines:?}")
-            }) {
-                pandoc::Inline::Str(s) => s.clone(),
+            match inlines
+                .iter()
+                .exactly_one()
+                .unwrap_or_else(|e| panic!("{e} get_first plain on multiple inlines {inlines:?}"))
+            {
+                pandoc::Inline::Str(s) => s,
                 other => panic!("Unexpected inline {other:?}"),
             }
         }
@@ -54,42 +59,29 @@ fn get_first_plain(blocks: Vec<pandoc::Block>) -> String {
     }
 }
 
-fn parse_table_head(head: pandoc::TableHead) -> Vec<String> {
+fn parse_table_head(head: &pandoc::TableHead) -> Vec<String> {
     rows_to_vec_str(
         head.rows
-            .expect_one()
-            .unwrap_or_else(|| panic!("Unexpected {:?} of len > 1", head.rows)),
+            .iter()
+            .exactly_one()
+            .unwrap_or_else(|e| panic!("{e} {:?} of len > 1", head.rows)),
     )
 }
 
-fn parse_table_bodies(bodies: Vec<pandoc::TableBody>) -> Vec<Vec<String>> {
+fn parse_table_bodies(bodies: &[pandoc::TableBody]) -> Vec<Vec<String>> {
     bodies
-        .expect_one()
-        .unwrap_or_else(|| panic!("Unexpected table bodies {:?} of len != 1", bodies))
+        .iter()
+        .exactly_one()
+        .unwrap_or_else(|e| panic!("{e} table bodies {:?} of len != 1", bodies))
         .body
         .iter()
         .map(rows_to_vec_str)
-        .collect()
+        .collect::<Vec<_>>()
 }
 
 fn rows_to_vec_str(row: &pandoc::Row) -> Vec<String> {
     row.cells
         .iter()
-        .map(|c| c.content.clone())
-        .map(get_first_plain)
-        .collect()
-}
-
-trait ExpectOne<T> {
-    fn expect_one(&self) -> Option<&T>;
-}
-
-impl<T> ExpectOne<T> for Vec<T> {
-    fn expect_one(&self) -> Option<&T> {
-        match &self[..] {
-            [] => None,
-            [s] => Some(s),
-            _ => None,
-        }
-    }
+        .map(|c| get_first_plain(&c.content).to_string())
+        .collect::<Vec<_>>()
 }
