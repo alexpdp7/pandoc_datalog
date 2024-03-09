@@ -22,19 +22,18 @@ fn process_table(table: Table) {
 }
 
 fn parse_table(table: pandoc::Table) -> Table {
-    match table {
-        pandoc::Table {
-            caption: pandoc::Caption {
-                long: long_caption, ..
-            },
-            head,
-            bodies,
-            ..
-        } => Table {
-            name: get_first_plain(long_caption),
-            columns: parse_table_head(head),
-            rows: parse_table_bodies(bodies),
+    let pandoc::Table {
+        caption: pandoc::Caption {
+            long: long_caption, ..
         },
+        head,
+        bodies,
+        ..
+    } = table;
+    Table {
+        name: get_first_plain(long_caption),
+        columns: parse_table_head(head),
+        rows: parse_table_bodies(bodies),
     }
 }
 
