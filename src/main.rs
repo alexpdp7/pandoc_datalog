@@ -15,8 +15,8 @@ fn main() {
 #[derive(Debug)]
 struct Table<'a> {
     name: &'a str,
-    columns: Vec<String>,
-    rows: Vec<Vec<String>>,
+    columns: Vec<&'a str>,
+    rows: Vec<Vec<&'a str>>,
 }
 
 fn process_table(table: &Table) {
@@ -59,7 +59,7 @@ fn get_first_plain(blocks: &[pandoc::Block]) -> &str {
     }
 }
 
-fn parse_table_head(head: &pandoc::TableHead) -> Vec<String> {
+fn parse_table_head(head: &pandoc::TableHead) -> Vec<&str> {
     rows_to_vec_str(
         head.rows
             .iter()
@@ -68,7 +68,7 @@ fn parse_table_head(head: &pandoc::TableHead) -> Vec<String> {
     )
 }
 
-fn parse_table_bodies(bodies: &[pandoc::TableBody]) -> Vec<Vec<String>> {
+fn parse_table_bodies(bodies: &[pandoc::TableBody]) -> Vec<Vec<&str>> {
     bodies
         .iter()
         .exactly_one()
@@ -79,9 +79,9 @@ fn parse_table_bodies(bodies: &[pandoc::TableBody]) -> Vec<Vec<String>> {
         .collect::<Vec<_>>()
 }
 
-fn rows_to_vec_str(row: &pandoc::Row) -> Vec<String> {
+fn rows_to_vec_str(row: &pandoc::Row) -> Vec<&str> {
     row.cells
         .iter()
-        .map(|c| get_first_plain(&c.content).to_string())
+        .map(|c| get_first_plain(&c.content))
         .collect::<Vec<_>>()
 }
