@@ -39,10 +39,10 @@ fn parse_table(table: pandoc::Table) -> Table {
 }
 
 fn get_first_plain(blocks: Vec<pandoc::Block>) -> String {
-    match blocks.first().expect(&format!(
-        "Unexpected get_first_plain on {:?} of len > 1",
-        blocks
-    )) {
+    if blocks.len() != 1 {
+        panic!("Unexpected get_first_plain on {:?} of len > 1", blocks);
+    }
+    match blocks.get(0).unwrap() {
         pandoc::Block::Plain(inlines) => {
             if inlines.len() != 1 {
                 panic!("Unexpected get_first plain on multiple inlines {inlines:?}");
@@ -68,7 +68,7 @@ fn parse_table_bodies(bodies: Vec<pandoc::TableBody>) -> Vec<Vec<String>> {
         panic!("Unexpected table bodies {:?} of len > 1", bodies);
     }
     bodies
-        .first()
+        .get(0)
         .unwrap()
         .body
         .iter()
